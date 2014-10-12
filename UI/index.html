@@ -1,0 +1,166 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Clientes Minutrade</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	
+	
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+	<style>
+	body{ padding: 40px}
+	</style>
+	<script type="text/html" id="exibeClienteTemplate">
+<tr>
+		<td><span data-bind="text: Id" class="sr-only"></span></td>
+		<td><span data-bind="text: Nome"</span></td>
+		<td><span data-bind="text: Endereco"</span></td>
+		<td><span data-bind="text: TelefoneResidencial"</span></td>
+		<td><span data-bind="text: TelefoneCelular"</span></td>
+		<td><span data-bind="text: DataNascimento"</span></td>
+		<td><button type="button" class="btn btn-primary" data-bind="click: function () { ClienteVM.editaClienteTemplate($data);}">Alterar</button></td>	
+	</tr>
+</script>
+
+
+<script type="text/html" id="editaClienteTemplate">
+    <tr>
+        <td><span data-bind="text: Id" class="sr-only"></span></td>
+		<td><span data-bind="text: Nome"</span></td>
+		<td><span data-bind="text: Endereco"</span></td>
+		<td><span data-bind="text: TelefoneResidencial"</span></td>
+        <td>
+            <input type="text" data-bind="value: $data.TelefoneCelular" id="txtTelC" />
+        </td>
+		<td>
+            <input type="text" data-bind="value:$rawData.DataNascimento, valueUpdate: 'keyup'" id="txtDtNasc" />
+        </td>
+        <td>
+            <button type="button" class="btn btn-warning" data-bind="click: ClienteVM.salvarCliente" >Salvar</button>
+			<button type="button" class="btn btn-default" data-bind="click: function () { ClienteVM.reset(); }" >Cancelar</button>	
+        </td>
+    </tr>
+</script>
+
+<script src="http://knockoutjs.com/downloads/knockout-3.2.0.js"> </script>
+  </head>
+  <body>
+  <div class="row">
+    <div class="col-md-4">
+    <label for="clienteNomeInput">Cliente</label> 
+    <input  class="form-control" id="clienteNomeInput" placeholder="Digite um nome" data-bind="value: query, valueUpdate: 'keyup'" autocomplete="off">
+  </div>
+  </div>
+	<table class="table table-hover">
+	<tr>
+		<th>#</th>
+		<th class="col-md-2">Cliente</th>
+		<th class="col-md-2">Endereço</th>
+		<th class="col-md-2">Telefone Residencial</th>
+		<th class="col-md-2">Telefone Celular</th>
+		<th class="col-md-2">Data Nascimento</th>
+		<th class="col-md-2">+</td>
+	</tr>
+	<tbody data-bind="template: { name: Template, foreach: clientesFiltrados }"></tbody>
+	</table>
+
+	
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+	
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
+	<script>
+var serverUrl = "http://localhost:7041/"
+var clientApiUrl = serverUrl + "api/Clientes/";
+	
+	// Objeto JS Cliente
+	
+	// Funcao para extender o KO
+	ko.utils.stringStartsWith = function(string, startsWith) {
+    string = string || "";
+    if (startsWith.length > string.length) return false;
+    return string.substring(0, startsWith.length) === startsWith;
+};
+	
+	var self = this;
+    self.Clientes = ko.observableArray([]);
+
+    carregarClientes();
+
+    function carregarClientes() {
+        $.ajax({
+            type: "GET",
+            url: clientApiUrl,
+            success: function (data) {
+                
+                self.Clientes(data);
+            },
+            error: function (err) {
+                
+            }
+        });
+
+    };
+    
+	var ClienteVM ={ 
+		exibeClienteTemplate : ko.observable("exibeClienteTemplate"),
+		query : ko.observable(''),
+		editaClienteTemplate : ko.observable()
+		};
+		 
+		ClienteVM.Template = function(tp){
+			return tp === this.editaClienteTemplate() ? 'editaClienteTemplate' : this.exibeClienteTemplate(); 
+		}.bind(ClienteVM);
+	
+	ClienteVM.DataValida = function(d){
+		var pattern =/^([0-9]{2})\/([0-9]{2})\/([0-9]{4})$/;
+		return pattern.test(d);
+	}.bind(ClienteVM);
+	
+	ClienteVM.clientesFiltrados = ko.computed(function() {
+    var filter = this.query().toLowerCase();
+    if (!filter) {
+        return self.Clientes();
+		} else {
+			return ko.utils.arrayFilter(self.Clientes(), function(item) {
+				return ko.utils.stringStartsWith(item.Nome.toLowerCase(), filter);
+			});
+		}
+	}, ClienteVM);
+	
+	ClienteVM.salvarCliente = function (c) {
+        var cli = {};
+		cli.Nome =c.Nome;
+		cli.Endereco = c.Endereco;
+		cli.TelefoneResidencial = c.TelefoneResidencial;
+		cli.DataNascimento = c.DataNascimento;
+		cli.TelefoneCelular = c.TelefoneCelular;
+		cli.Id = c.Id;
+        
+        $.ajax({
+            type: "PUT",
+            url: clientApiUrl + cli.Id,
+            data: cli,
+            success: function (data) {
+                alert("Record Updated Successfully " + data.status);
+				c.DataNascimento = 'z';
+                ClienteVM.reset();
+            },
+            error: function (err) {
+                alert("Error Occures, Please Reload the Page and Try Again " + err.status);
+                ClienteVM.reset();
+            }
+        });
+    };
+	
+	ClienteVM.reset = function (t) {
+        this.editaClienteTemplate("exibeClienteTemplate");
+    };
+	
+	ko.applyBindings(ClienteVM);
+</script>
+  </body>
+</html>
